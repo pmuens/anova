@@ -279,3 +279,11 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/linux,macos,windows,vim,emacs,intellij+all,code,sublimetext,rust
+
+
+# Added by cargo
+#
+# already existing elements were commented out
+
+/target
+#Cargo.lock
