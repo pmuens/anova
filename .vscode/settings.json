@@ -1,0 +1,11 @@
+{
+  "editor.tabSize": 4,
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.formatOnType": true,
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "[rust]": {
+    "editor.defaultFormatter": "matklad.rust-analyzer"
+  }
+}
