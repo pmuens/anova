@@ -2,6 +2,7 @@
 //! as well as user- and developer experience.
 
 extern crate bincode;
+extern crate serde;
 extern crate sha3;
 
 pub mod consensus;

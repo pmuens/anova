@@ -1,8 +1,10 @@
 use bincode;
-use sha3::Digest;
+use serde::Serialize;
+
+use super::utils;
 
 /// A Transaction which includes a reference to its sender and a nonce.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Transaction {
     id: Vec<u8>,
     sender: Vec<u8>,
@@ -13,16 +15,10 @@ impl Transaction {
     /// Creates a new Transaction.
     pub fn new(sender: Vec<u8>, nonce: u64) -> Self {
         let marshaled = marshal(&sender, &nonce);
-        let id = hash(&marshaled);
+        let id = utils::hash(&marshaled);
 
         Transaction { id, sender, nonce }
     }
-}
-
-fn hash<T: AsRef<[u8]>>(data: T) -> Vec<u8> {
-    let mut hasher = sha3::Keccak256::new();
-    hasher.update(data);
-    hasher.finalize().as_slice().to_vec()
 }
 
 fn marshal(sender: &Vec<u8>, nonce: &u64) -> Vec<u8> {
