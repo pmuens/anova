@@ -11,7 +11,8 @@ pub struct Block {
 
 impl Block {
     /// Creates a new Block.
-    pub fn new(transactions: Vec<Transaction>, previous_block_id: Option<Vec<u8>>) -> Self {
+    pub fn new(transactions: Vec<Transaction>) -> Self {
+        let previous_block_id = None;
         let id = generate_id(&transactions, previous_block_id.as_ref());
 
         Block {
@@ -53,7 +54,7 @@ mod tests {
         let tx_2 = Transaction::new(vec![0, 1, 2, 3, 4], 2);
         let tx_3 = Transaction::new(vec![5, 6, 7, 8, 9], 1);
 
-        let block = Block::new(vec![tx_1.clone(), tx_2.clone(), tx_3.clone()], None);
+        let block = Block::new(vec![tx_1.clone(), tx_2.clone(), tx_3.clone()]);
         let expected = Block {
             id: vec![
                 246, 134, 115, 10, 204, 145, 13, 37, 13, 114, 184, 74, 164, 48, 50, 144, 22, 104,
@@ -70,7 +71,7 @@ mod tests {
     fn set_previous_block_id() {
         let tx = Transaction::new(vec![0, 1, 2, 3, 4], 1);
 
-        let mut block = Block::new(vec![tx.clone()], None);
+        let mut block = Block::new(vec![tx.clone()]);
         let expected_initial = Block {
             id: vec![
                 61, 76, 173, 32, 98, 204, 110, 230, 105, 241, 153, 253, 74, 212, 214, 61, 101, 52,

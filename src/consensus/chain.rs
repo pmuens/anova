@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn height() {
         let tx = Transaction::new(vec![0, 1, 2, 3, 4], 1);
-        let block = Block::new(vec![tx], None);
+        let block = Block::new(vec![tx]);
 
         let mut chain = Chain::new(1);
         let height = chain.append(block);
@@ -68,8 +68,8 @@ mod tests {
         let tx_2 = Transaction::new(vec![0, 1, 2, 3, 4], 2);
         let tx_3 = Transaction::new(vec![5, 6, 7, 8, 9], 1);
 
-        let block_1 = Block::new(vec![tx_1.clone(), tx_2.clone()], None);
-        let block_2 = Block::new(vec![tx_3.clone()], None);
+        let block_1 = Block::new(vec![tx_1.clone(), tx_2.clone()]);
+        let block_2 = Block::new(vec![tx_3.clone()]);
 
         let mut chain = Chain::new(100);
         let mut height;
