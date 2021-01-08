@@ -14,11 +14,15 @@ pub struct Transaction {
 impl Transaction {
     /// Creates a new Transaction.
     pub fn new(sender: Vec<u8>, nonce: u64) -> Self {
-        let marshaled = marshal(&sender, &nonce);
-        let id = utils::hash(&marshaled);
+        let id = generate_id(&sender, &nonce);
 
         Transaction { id, sender, nonce }
     }
+}
+
+fn generate_id(sender: &Vec<u8>, nonce: &u64) -> Vec<u8> {
+    let marshaled = marshal(&sender, &nonce);
+    utils::hash(&marshaled)
 }
 
 fn marshal(sender: &Vec<u8>, nonce: &u64) -> Vec<u8> {
