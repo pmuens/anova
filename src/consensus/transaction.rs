@@ -14,20 +14,21 @@ pub struct Transaction {
 impl Transaction {
     /// Creates a new Transaction.
     pub fn new(sender: Vec<u8>, nonce: u64) -> Self {
-        let id = generate_id(&sender, &nonce);
-
+        let id = Transaction::generate_id(&sender, &nonce);
         Transaction { id, sender, nonce }
     }
-}
 
-fn generate_id(sender: &Vec<u8>, nonce: &u64) -> Vec<u8> {
-    let marshaled = marshal(&sender, &nonce);
-    utils::hash(&marshaled)
-}
+    /// Generates a unique Transaction id.
+    pub fn generate_id(sender: &Vec<u8>, nonce: &u64) -> Vec<u8> {
+        let marshaled = Transaction::marshal(&sender, &nonce);
+        utils::hash(&marshaled)
+    }
 
-fn marshal(sender: &Vec<u8>, nonce: &u64) -> Vec<u8> {
-    let values = (sender, nonce);
-    bincode::serialize(&values).unwrap()
+    /// Marshals the Transaction data into a binary representation.
+    pub fn marshal(sender: &Vec<u8>, nonce: &u64) -> Vec<u8> {
+        let values = (sender, nonce);
+        bincode::serialize(&values).unwrap()
+    }
 }
 
 #[cfg(test)]

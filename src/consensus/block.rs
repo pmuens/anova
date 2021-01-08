@@ -13,8 +13,7 @@ impl Block {
     /// Creates a new Block.
     pub fn new(transactions: Vec<Transaction>) -> Self {
         let previous_block_id = None;
-        let id = generate_id(&transactions, previous_block_id.as_ref());
-
+        let id = Block::generate_id(&transactions, previous_block_id.as_ref());
         Block {
             id,
             transactions,
@@ -30,18 +29,26 @@ impl Block {
     /// Sets the `previous_block_id` and updates the Blocks `id`.
     pub fn set_previous_block_id(&mut self, previous_block_id: Option<Vec<u8>>) {
         self.previous_block_id = previous_block_id;
-        self.id = generate_id(&self.transactions, self.previous_block_id.as_ref());
+        self.id = Block::generate_id(&self.transactions, self.previous_block_id.as_ref());
     }
-}
 
-fn generate_id(transactions: &Vec<Transaction>, previous_block_id: Option<&Vec<u8>>) -> Vec<u8> {
-    let marshaled = marshal(&transactions, previous_block_id);
-    utils::hash(&marshaled)
-}
+    /// Generates a unique Block id.
+    pub fn generate_id(
+        transactions: &Vec<Transaction>,
+        previous_block_id: Option<&Vec<u8>>,
+    ) -> Vec<u8> {
+        let marshaled = Block::marshal(&transactions, previous_block_id);
+        utils::hash(&marshaled)
+    }
 
-fn marshal(transactions: &Vec<Transaction>, previous_block_id: Option<&Vec<u8>>) -> Vec<u8> {
-    let values = (transactions, previous_block_id);
-    bincode::serialize(&values).unwrap()
+    /// Marshals the Block data into a binary representation.
+    pub fn marshal(
+        transactions: &Vec<Transaction>,
+        previous_block_id: Option<&Vec<u8>>,
+    ) -> Vec<u8> {
+        let values = (transactions, previous_block_id);
+        bincode::serialize(&values).unwrap()
+    }
 }
 
 #[cfg(test)]

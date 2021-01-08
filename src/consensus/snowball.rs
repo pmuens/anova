@@ -43,7 +43,7 @@ where
         if self.is_done {
             return;
         }
-        let vote_mappings = count_votes(votes);
+        let vote_mappings = Snowball::count_votes(votes);
         let vote_counts: Vec<u8> = vote_mappings.keys().cloned().collect();
         let votes_max = vote_counts.iter().max().unwrap();
         if votes_max >= &self.quorum_size {
@@ -61,17 +61,19 @@ where
             self.is_done = true;
         }
     }
-}
 
-fn count_votes<T: PartialEq + Clone>(votes: Vec<T>) -> HashMap<u8, T> {
-    let value_a = votes.get(0).cloned().unwrap();
-    let value_b = votes.iter().find(|&val| val != &value_a).cloned().unwrap();
-    let count_a = votes.iter().filter(|&val| val == &value_a).count();
-    let count_b = votes.len() - count_a;
-    let mut result: HashMap<u8, T> = HashMap::with_capacity(2);
-    result.insert(count_a.try_into().unwrap(), value_a);
-    result.insert(count_b.try_into().unwrap(), value_b);
-    result
+    /// Creates a mapping of vote counts to vote values.
+    /// **NOTE:** Only works with binary vote values.
+    pub fn count_votes(votes: Vec<T>) -> HashMap<u8, T> {
+        let value_a = votes.get(0).cloned().unwrap();
+        let value_b = votes.iter().find(|&val| val != &value_a).cloned().unwrap();
+        let count_a = votes.iter().filter(|&val| val == &value_a).count();
+        let count_b = votes.len() - count_a;
+        let mut result: HashMap<u8, T> = HashMap::with_capacity(2);
+        result.insert(count_a.try_into().unwrap(), value_a);
+        result.insert(count_b.try_into().unwrap(), value_b);
+        result
+    }
 }
 
 #[cfg(test)]
