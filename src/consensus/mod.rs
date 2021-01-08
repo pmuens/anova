@@ -3,6 +3,7 @@
 
 pub mod block;
 pub mod chain;
+pub mod snowball;
 pub mod transaction;
 
 mod utils;
