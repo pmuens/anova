@@ -1,7 +1,7 @@
 use super::transaction::Transaction;
 use super::utils;
 
-/// A Block that contains multiple [Transactions](crate::consensus::transaction::Transaction).
+/// A Block that contains multiple [Transactions](crate::transaction::Transaction).
 #[derive(Debug, PartialEq)]
 pub struct Block {
     pub id: Vec<u8>,

@@ -1,6 +1,6 @@
 use super::block::Block;
 
-/// An immutable Chain made up of multiple [Blocks](crate::consensus::block::Block).
+/// An immutable Chain made up of multiple [Blocks](crate::block::Block).
 pub struct Chain {
     blocks: Vec<Block>,
 }
@@ -42,7 +42,7 @@ impl Chain {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::consensus::transaction::Transaction;
+    use crate::transaction::Transaction;
 
     #[test]
     fn new_chain() {

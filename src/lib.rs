@@ -1,8 +1,12 @@
-//! Anova is a distributed ledger with a focus on privacy, safety, scalability
-//! as well as user- and developer experience.
+//! Anova is a distributed ledger with a focus on privacy, safety and scalability.
 
 extern crate bincode;
 extern crate serde;
 extern crate sha3;
 
-pub mod consensus;
+pub mod block;
+pub mod chain;
+pub mod snowball;
+pub mod transaction;
+
+mod utils;
