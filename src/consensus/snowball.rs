@@ -1,16 +1,20 @@
-use std::collections::HashMap;
-use std::convert::TryInto;
+use std::{collections::HashMap, hash::Hash};
 
-/// Snowball algorithm from the family of
+/// Himitsu variant of the Snowball algorithm from the family of
 /// [Metastable Consensus Protocols](https://arxiv.org/abs/1906.08936).
 #[derive(Debug, PartialEq)]
-pub struct Snowball<T> {
+pub struct Snowball<T>
+where
+    T: Eq + Hash,
+{
     /// The current value.
     value: Option<T>,
     /// Returns whether the algorithm converged.
-    is_done: bool,
+    done: bool,
     /// Records the number of consecutive successes.
-    successes: u8,
+    counter: u8,
+    /// Records the number of consecutive successes for each individual item.
+    counters: HashMap<T, u8>,
     /// Number or queried peers. Subset of all available peers.
     /// Referred to as `k` in the whitepaper.
     sample_size: u8,
@@ -24,14 +28,15 @@ pub struct Snowball<T> {
 
 impl<T> Snowball<T>
 where
-    T: PartialEq + Clone,
+    T: Eq + Hash + Clone,
 {
     /// Creates a new Snowball.
     pub fn new(sample_size: u8, quorum_size: u8, decision_threshold: u8) -> Self {
         Snowball {
             value: None,
-            is_done: false,
-            successes: 0,
+            done: false,
+            counter: 0,
+            counters: HashMap::new(),
             sample_size,
             quorum_size,
             decision_threshold,
@@ -39,40 +44,57 @@ where
     }
 
     /// Run one round of the Snowball algorithm.
-    pub fn tick(&mut self, votes: Vec<T>) {
-        if self.is_done {
+    pub fn tick(&mut self, votes: HashMap<T, f64>) {
+        // Return if we already settled on a value.
+        if self.done {
             return;
         }
-        let vote_mappings = Snowball::count_votes(votes);
-        let vote_counts: Vec<u8> = vote_mappings.keys().cloned().collect();
-        let votes_max = vote_counts.iter().max().unwrap();
-        if votes_max >= &self.quorum_size {
+
+        // Ensure that the denominator (number of votes) can't be less than 2.
+        let mut denom = votes.keys().len() as f64;
+        if denom < 2.0 {
+            denom = 2.0;
+        }
+
+        // Get item with the majority of votes and its votes.
+        let mut favorite: Option<T> = None;
+        let mut favorite_votes: f64 = 0.0;
+        for (item, votes) in votes.into_iter() {
+            if votes > favorite_votes {
+                favorite = Some(item);
+                favorite_votes = votes;
+            }
+        }
+
+        // Check if there's a quorum.
+        if favorite_votes >= (self.quorum_size as f64 * 2.0 / denom) {
+            // We have votes for favorites so we can safely unwrap.
+            let favorite = favorite.unwrap();
+            // Store the old value so that we can use it for comparison later.
             let old_value = self.value.clone();
-            self.value = vote_mappings.get(votes_max).cloned();
-            if self.value == old_value {
-                self.successes += 1;
+            // Increment the favorites counter.
+            *self.counters.entry(favorite.clone()).or_insert(0) += 1;
+            // Set the current value to the favorite if its counter is higher.
+            if self.value.is_none()
+                || self.counters.get(&favorite) > self.counters.get(self.value.as_ref().unwrap())
+            {
+                self.value = Some(favorite.clone());
+            }
+            // Increment the counter if we've seen the favorite before.
+            if Some(favorite) == old_value {
+                self.counter += 1;
             } else {
-                self.successes = 1;
+                self.counter = 1;
             }
         } else {
-            self.successes = 0;
+            // We haven't found a quorum so we reset the counter to 0.
+            self.counter = 0;
         }
-        if self.successes > self.decision_threshold {
-            self.is_done = true;
+        // We consider the Snowball algorithm done if we've seen the favorite enough
+        // times in a row.
+        if self.counter > self.decision_threshold {
+            self.done = true;
         }
-    }
-
-    /// Creates a mapping of vote counts to vote values.
-    /// **NOTE:** Only works with binary vote values.
-    pub fn count_votes(votes: Vec<T>) -> HashMap<u8, T> {
-        let value_a = votes.get(0).cloned().unwrap();
-        let value_b = votes.iter().find(|&val| val != &value_a).cloned().unwrap();
-        let count_a = votes.iter().filter(|&val| val == &value_a).count();
-        let count_b = votes.len() - count_a;
-        let mut result: HashMap<u8, T> = HashMap::with_capacity(2);
-        result.insert(count_a.try_into().unwrap(), value_a);
-        result.insert(count_b.try_into().unwrap(), value_b);
-        result
     }
 }
 
@@ -80,13 +102,14 @@ where
 mod tests {
     use super::*;
 
-    #[derive(Debug, PartialEq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Hash, Clone)]
     enum Color {
         Red,
+        Green,
         Blue,
     }
 
-    fn get_snowball<T: PartialEq + Clone>() -> Snowball<T> {
+    fn get_snowball<T: Eq + Hash + Clone>() -> Snowball<T> {
         let sample_size = 5;
         let quorum_size = 4;
         let decision_threshold = 3;
@@ -98,8 +121,9 @@ mod tests {
         let snowball: Snowball<()> = get_snowball();
         let expected: Snowball<()> = Snowball {
             value: None,
-            is_done: false,
-            successes: 0,
+            done: false,
+            counter: 0,
+            counters: HashMap::new(),
             sample_size: 5,
             quorum_size: 4,
             decision_threshold: 3,
@@ -111,126 +135,122 @@ mod tests {
     #[test]
     fn track_successes() {
         let mut snowball = get_snowball();
+        let mut votes = HashMap::new();
 
-        let votes = vec![
-            // 4 Red
-            Color::Red,
-            Color::Red,
-            Color::Red,
-            Color::Red,
-            // 1 Blue
-            Color::Blue,
-        ];
+        votes.insert(Color::Red, 3.0);
+        votes.insert(Color::Green, 1.0);
+        votes.insert(Color::Blue, 1.0);
+
         snowball.tick(votes);
-        assert_eq!(snowball.successes, 1);
-        assert_eq!(snowball.is_done, false);
+        assert_eq!(snowball.counter, 1);
+        assert_eq!(snowball.done, false);
         assert_eq!(snowball.value, Some(Color::Red));
     }
 
     #[test]
     fn reset_when_no_quorum() {
         let mut snowball = get_snowball();
-        let mut votes: Vec<Color>;
+        let mut votes = HashMap::new();
 
-        votes = vec![
-            // 4 Red
-            Color::Red,
-            Color::Red,
-            Color::Red,
-            Color::Red,
-            // 1 Blue
-            Color::Blue,
-        ];
-        snowball.tick(votes);
-        assert_eq!(snowball.successes, 1);
-        assert_eq!(snowball.is_done, false);
+        votes.insert(Color::Red, 3.0);
+        votes.insert(Color::Green, 1.0);
+        votes.insert(Color::Blue, 1.0);
+
+        snowball.tick(votes.clone());
+        assert_eq!(snowball.counter, 1);
+        assert_eq!(snowball.done, false);
         assert_eq!(snowball.value, Some(Color::Red));
 
-        votes = vec![
-            // 2 Red
-            Color::Red,
-            Color::Red,
-            // 2 Blue
-            Color::Blue,
-            Color::Blue,
-        ];
+        votes.clear();
+
+        votes.insert(Color::Red, 2.0);
+        votes.insert(Color::Green, 2.0);
+        votes.insert(Color::Blue, 1.0);
         snowball.tick(votes);
-        assert_eq!(snowball.successes, 0);
-        assert_eq!(snowball.is_done, false);
+        assert_eq!(snowball.counter, 0);
+        assert_eq!(snowball.done, false);
         assert_eq!(snowball.value, Some(Color::Red));
     }
 
     #[test]
     fn change_in_majority() {
         let mut snowball = get_snowball();
-        let mut votes: Vec<Color>;
+        let mut votes = HashMap::new();
 
-        votes = vec![
-            // 4 Red
-            Color::Red,
-            Color::Red,
-            Color::Red,
-            Color::Red,
-            // 1 Blue
-            Color::Blue,
-        ];
-        snowball.tick(votes);
-        assert_eq!(snowball.successes, 1);
-        assert_eq!(snowball.is_done, false);
+        votes.insert(Color::Red, 3.0);
+        votes.insert(Color::Green, 1.0);
+        votes.insert(Color::Blue, 1.0);
+
+        snowball.tick(votes.clone());
+        assert_eq!(snowball.counter, 1);
+        assert_eq!(snowball.done, false);
         assert_eq!(snowball.value, Some(Color::Red));
 
-        votes = vec![
-            // 1 Red
-            Color::Red,
-            // 4 Blue
-            Color::Blue,
-            Color::Blue,
-            Color::Blue,
-            Color::Blue,
-        ];
+        votes.clear();
+
+        votes.insert(Color::Red, 1.0);
+        votes.insert(Color::Green, 1.0);
+        votes.insert(Color::Blue, 3.0);
+
+        snowball.tick(votes.clone());
+        assert_eq!(snowball.counter, 1);
+        assert_eq!(snowball.done, false);
+        assert_eq!(snowball.value, Some(Color::Red));
+
+        votes.clear();
+
+        votes.insert(Color::Red, 1.0);
+        votes.insert(Color::Green, 1.0);
+        votes.insert(Color::Blue, 3.0);
+
+        snowball.tick(votes.clone());
+        assert_eq!(snowball.counter, 1);
+        assert_eq!(snowball.done, false);
+        assert_eq!(snowball.value, Some(Color::Blue));
+
+        votes.clear();
+
+        votes.insert(Color::Red, 1.0);
+        votes.insert(Color::Green, 1.0);
+        votes.insert(Color::Blue, 3.0);
+
         snowball.tick(votes);
-        assert_eq!(snowball.successes, 1);
-        assert_eq!(snowball.is_done, false);
+        assert_eq!(snowball.counter, 2);
+        assert_eq!(snowball.done, false);
         assert_eq!(snowball.value, Some(Color::Blue));
     }
 
     #[test]
     fn convergence() {
         let mut snowball = get_snowball();
-        let votes: Vec<Color>;
+        let mut votes = HashMap::new();
 
-        votes = vec![
-            // 4 Red
-            Color::Red,
-            Color::Red,
-            Color::Red,
-            Color::Red,
-            // 1 Blue
-            Color::Blue,
-        ];
+        votes.insert(Color::Red, 3.0);
+        votes.insert(Color::Green, 1.0);
+        votes.insert(Color::Blue, 1.0);
 
         // 1st round
         snowball.tick(votes.clone());
-        assert_eq!(snowball.successes, 1);
-        assert_eq!(snowball.is_done, false);
+        assert_eq!(snowball.counter, 1);
+        assert_eq!(snowball.done, false);
         assert_eq!(snowball.value, Some(Color::Red));
 
         // 2nd round
         snowball.tick(votes.clone());
-        assert_eq!(snowball.successes, 2);
-        assert_eq!(snowball.is_done, false);
+        assert_eq!(snowball.counter, 2);
+        assert_eq!(snowball.done, false);
         assert_eq!(snowball.value, Some(Color::Red));
 
         // 3rd round
         snowball.tick(votes.clone());
-        assert_eq!(snowball.successes, 3);
-        assert_eq!(snowball.is_done, false);
+        assert_eq!(snowball.counter, 3);
+        assert_eq!(snowball.done, false);
         assert_eq!(snowball.value, Some(Color::Red));
 
         // 4th round
-        snowball.tick(votes.clone());
-        assert_eq!(snowball.successes, 4);
-        assert_eq!(snowball.is_done, true);
+        snowball.tick(votes);
+        assert_eq!(snowball.counter, 4);
+        assert_eq!(snowball.done, true);
         assert_eq!(snowball.value, Some(Color::Red));
     }
 }
