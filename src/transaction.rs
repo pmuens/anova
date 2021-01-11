@@ -1,12 +1,13 @@
 use bincode;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::utils;
+use super::utils::{BinEncoding, Keccak256};
 
 /// A Transaction which includes a reference to its sender and a nonce.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Transaction {
-    id: Vec<u8>,
+    id: Keccak256,
     sender: Vec<u8>,
     nonce: u64,
 }
@@ -19,15 +20,21 @@ impl Transaction {
     }
 
     /// Generates a unique Transaction id.
-    pub fn generate_id(sender: &Vec<u8>, nonce: &u64) -> Vec<u8> {
-        let marshaled = Transaction::marshal(&sender, &nonce);
-        utils::hash(&marshaled)
+    pub fn generate_id(sender: &Vec<u8>, nonce: &u64) -> Keccak256 {
+        let serialized = Transaction::serialize(&sender, &nonce);
+        utils::hash(&serialized)
     }
 
-    /// Marshals the Transaction data into a binary representation.
-    pub fn marshal(sender: &Vec<u8>, nonce: &u64) -> Vec<u8> {
+    /// Serializes the Transaction data into a binary representation.
+    pub fn serialize(sender: &Vec<u8>, nonce: &u64) -> BinEncoding {
         let values = (sender, nonce);
         bincode::serialize(&values).unwrap()
+    }
+
+    /// Deserializes a Transactions binary representation.
+    pub fn deserialize(data: BinEncoding) -> Transaction {
+        let (sender, nonce) = bincode::deserialize(&data[..]).unwrap();
+        Transaction::new(sender, nonce)
     }
 }
 
@@ -48,5 +55,21 @@ mod tests {
         };
 
         assert_eq!(tx, expected);
+    }
+
+    #[test]
+    fn serde() {
+        let sender = vec![0, 1, 2, 3, 4];
+        let nonce = 42;
+        let tx = Transaction::new(sender.clone(), nonce);
+
+        let serialized = Transaction::serialize(&sender, &nonce);
+        assert_eq!(
+            serialized,
+            vec![5, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 42, 0, 0, 0, 0, 0, 0, 0]
+        );
+
+        let deserialized = Transaction::deserialize(serialized);
+        assert_eq!(deserialized, tx);
     }
 }
