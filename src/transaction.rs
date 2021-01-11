@@ -26,13 +26,13 @@ impl Transaction {
     }
 
     /// Serializes the Transaction data into a binary representation.
-    pub fn serialize(sender: &Sender, nonce: &u64) -> BinEncoding {
+    pub fn serialize(sender: &Sender, nonce: &u64) -> BinEncoding<Transaction> {
         let values = (sender, nonce);
         bincode::serialize(&values).unwrap()
     }
 
     /// Deserializes a Transactions binary representation.
-    pub fn deserialize(data: BinEncoding) -> Transaction {
+    pub fn deserialize(data: BinEncoding<Transaction>) -> Transaction {
         let (sender, nonce) = bincode::deserialize(&data[..]).unwrap();
         Transaction::new(sender, nonce)
     }

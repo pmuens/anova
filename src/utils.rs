@@ -1,7 +1,16 @@
 use sha3::Digest;
 
+/// Dummy trait used to map a generic type to a u8.
+pub trait AlwaysU8 {
+    type Type;
+}
+
+impl<T> AlwaysU8 for T {
+    type Type = u8;
+}
+
 /// A types binary encoding.
-pub(crate) type BinEncoding = Vec<u8>;
+pub(crate) type BinEncoding<T> = Vec<<T as AlwaysU8>::Type>;
 
 // A Keccak256 hash.
 pub(crate) type Keccak256 = Vec<u8>;

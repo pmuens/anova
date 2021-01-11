@@ -45,13 +45,13 @@ impl Block {
     pub fn serialize(
         transactions: &Vec<Transaction>,
         prev_block_id: Option<&Keccak256>,
-    ) -> BinEncoding {
+    ) -> BinEncoding<Block> {
         let values = (transactions, prev_block_id);
         bincode::serialize(&values).unwrap()
     }
 
     /// Deserializes a Blocks binary representation.
-    pub fn deserialize(data: BinEncoding) -> Block {
+    pub fn deserialize(data: BinEncoding<Block>) -> Block {
         let (transactions, prev_block_id) = bincode::deserialize(&data[..]).unwrap();
         Block::new(transactions, prev_block_id)
     }
