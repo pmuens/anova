@@ -2,31 +2,31 @@ use bincode;
 use serde::{Deserialize, Serialize};
 
 use super::utils;
-use super::utils::{BinEncoding, Keccak256};
+use super::utils::{BinEncoding, Keccak256, Sender};
 
 /// A Transaction which includes a reference to its sender and a nonce.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Transaction {
     id: Keccak256,
-    sender: Vec<u8>,
+    sender: Sender,
     nonce: u64,
 }
 
 impl Transaction {
     /// Creates a new Transaction.
-    pub fn new(sender: Vec<u8>, nonce: u64) -> Self {
+    pub fn new(sender: Sender, nonce: u64) -> Self {
         let id = Transaction::generate_id(&sender, &nonce);
         Transaction { id, sender, nonce }
     }
 
     /// Generates a unique Transaction id.
-    pub fn generate_id(sender: &Vec<u8>, nonce: &u64) -> Keccak256 {
+    pub fn generate_id(sender: &Sender, nonce: &u64) -> Keccak256 {
         let serialized = Transaction::serialize(&sender, &nonce);
         utils::hash(&serialized)
     }
 
     /// Serializes the Transaction data into a binary representation.
-    pub fn serialize(sender: &Vec<u8>, nonce: &u64) -> BinEncoding {
+    pub fn serialize(sender: &Sender, nonce: &u64) -> BinEncoding {
         let values = (sender, nonce);
         bincode::serialize(&values).unwrap()
     }
