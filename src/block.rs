@@ -3,7 +3,7 @@ use super::utils;
 use super::utils::{BinEncoding, Keccak256};
 
 /// A Block that contains multiple [Transactions](crate::transaction::Transaction).
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub id: Keccak256,
     transactions: Vec<Transaction>,

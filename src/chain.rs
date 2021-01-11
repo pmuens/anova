@@ -1,41 +1,44 @@
 use super::block::Block;
 
 /// An immutable Chain made up of multiple [Blocks](crate::block::Block).
-pub struct Chain {
-    blocks: Vec<Block>,
-}
+pub struct Chain(Vec<Block>);
 
 impl Chain {
     /// Creates a new Chain.
     pub fn new(init_capacity: usize) -> Self {
-        let blocks: Vec<Block> = Vec::with_capacity(init_capacity);
-        Chain { blocks }
+        let chain: Vec<Block> = Vec::with_capacity(init_capacity);
+        Chain(chain)
     }
 
     /// Appends a new Block and returns the current height.
     pub fn append(&mut self, mut block: Block) -> u64 {
-        let previous_block = self.blocks.last();
+        let previous_block = self.0.last();
         let mut previous_block_id = None;
         if let Some(prev_block) = previous_block {
             previous_block_id = Some(prev_block.id.clone());
         }
         block.set_previous_block_id(previous_block_id);
-        self.blocks.push(block);
+        self.0.push(block);
         // We can safely unwrap here given that we just appended a Block
         self.height().unwrap()
     }
 
     /// Returns the current height.
     pub fn height(&self) -> Option<u64> {
-        if self.blocks.is_empty() {
+        if self.0.is_empty() {
             return None;
         }
-        Some((self.blocks.len() - 1) as u64)
+        Some((self.0.len() - 1) as u64)
     }
 
     /// Returns a reference to the Block at the given index.
     pub fn get(&self, index: usize) -> Option<&Block> {
-        self.blocks.get(index)
+        self.0.get(index)
+    }
+
+    /// Returns a reference to the last Block.
+    pub fn last(&self) -> Option<&Block> {
+        self.0.last()
     }
 }
 
@@ -47,7 +50,7 @@ mod tests {
     #[test]
     fn new_chain() {
         let chain = Chain::new(100);
-        assert_eq!(chain.height(), None);
+        assert_eq!(chain.0.len(), 0);
     }
 
     #[test]
@@ -60,6 +63,28 @@ mod tests {
 
         assert_eq!(height, 0);
         assert_eq!(chain.height(), Some(0));
+    }
+
+    #[test]
+    fn get() {
+        let tx = Transaction::new(vec![0, 1, 2, 3, 4], 1);
+        let block = Block::new(vec![tx], None);
+
+        let mut chain = Chain::new(1);
+        chain.append(block.clone());
+
+        assert_eq!(chain.get(0), Some(&block));
+    }
+
+    #[test]
+    fn last() {
+        let tx = Transaction::new(vec![0, 1, 2, 3, 4], 1);
+        let block = Block::new(vec![tx], None);
+
+        let mut chain = Chain::new(1);
+        chain.append(block.clone());
+
+        assert_eq!(chain.last(), Some(&block));
     }
 
     #[test]
