@@ -7,8 +7,11 @@ use super::utils::{BinEncoding, Keccak256, Sender};
 /// A Transaction which includes a reference to its sender and a nonce.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Transaction {
-    id: Keccak256,
+    /// Id which uniquely identifies the Transaction.
+    pub id: Keccak256,
+    /// Entity which created the Transaction.
     sender: Sender,
+    /// Nonce used to mitigate replay attacks.
     nonce: u64,
 }
 

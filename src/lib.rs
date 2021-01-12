@@ -6,6 +6,7 @@ extern crate sha3;
 
 pub mod block;
 pub mod chain;
+pub mod mempool;
 pub mod snowball;
 pub mod transaction;
 
