@@ -5,8 +5,11 @@ use super::utils::{BinEncoding, Keccak256};
 /// A Block that contains multiple [Transactions](crate::transaction::Transaction).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
+    /// Id which uniquely identifies the Block.
     pub id: Keccak256,
-    transactions: Vec<Transaction>,
+    /// List of transactions included in this Block.
+    pub transactions: Vec<Transaction>,
+    /// Id which references the preceding Block.
     prev_block_id: Option<Keccak256>,
 }
 
